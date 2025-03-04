@@ -1037,7 +1037,7 @@ static common_chat_params common_chat_params_init_deepseek_r1(const common_chat_
                 "<think>",
                 "</think>",
                 "<｜tool▁sep｜>",
-                "<｜tool▁calls▁end｜",
+                "<｜tool▁calls▁end｜>",
                 "<｜tool▁call▁end｜>",
             };
         }, grammar_options);
