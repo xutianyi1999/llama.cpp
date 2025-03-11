@@ -222,6 +222,19 @@ static struct ggml_tensor * llm_build_lora_mm(
     return res;
 }
 
+static struct ggml_tensor * llm_build_mm_low_rank(
+         struct ggml_context * ctx0,
+          struct ggml_tensor * a,
+          struct ggml_tensor * b,
+          struct ggml_tensor * cur) {
+    // b = {896, 50}, cur = {896, 512}, b * transpose(cur) => {50, 512}
+    struct ggml_tensor * t = ggml_mul_mat(ctx0, b, cur);
+    // a = {50, 128}, t = {50, 512}, a * transpose(t) => {128, 512}
+    struct ggml_tensor * res = ggml_mul_mat(ctx0, a, t);
+
+    return res;
+}
+
 // do mat_mul_id, while optionally apply lora
 static struct ggml_tensor * llm_build_lora_mm_id(
         struct llama_context & lctx,
@@ -3350,17 +3363,33 @@ struct llm_build_context {
             // self-attention
             {
                 // compute Q and K and RoPE them
-                struct ggml_tensor * Qcur = llm_build_lora_mm(lctx, ctx0, model.layers[il].wq, cur);
+                struct ggml_tensor * Qcur;
+
+                if (model.layers[il].wq_a != nullptr && model.layers[il].wq_b != nullptr) {
+                    Qcur = llm_build_mm_low_rank(ctx0, model.layers[il].wq_a, model.layers[il].wq_b, cur);
+                } else {
+                    Qcur = llm_build_lora_mm(lctx, ctx0, model.layers[il].wq, cur);
+                }
                 cb(Qcur, "Qcur", il);
                 Qcur = ggml_add(ctx0, Qcur, model.layers[il].bq);
                 cb(Qcur, "Qcur", il);
 
-                struct ggml_tensor * Kcur = llm_build_lora_mm(lctx, ctx0, model.layers[il].wk, cur);
+                struct ggml_tensor * Kcur;
+                if (model.layers[il].wk_a != nullptr && model.layers[il].wk_b != nullptr) {
+                    Kcur = llm_build_mm_low_rank(ctx0, model.layers[il].wk_a, model.layers[il].wk_b, cur);
+                } else {
+                    Kcur = llm_build_lora_mm(lctx, ctx0, model.layers[il].wk, cur);
+                }
                 cb(Kcur, "Kcur", il);
                 Kcur = ggml_add(ctx0, Kcur, model.layers[il].bk);
                 cb(Kcur, "Kcur", il);
 
-                struct ggml_tensor * Vcur = llm_build_lora_mm(lctx, ctx0, model.layers[il].wv, cur);
+                struct ggml_tensor * Vcur;
+                if (model.layers[il].wv_a != nullptr && model.layers[il].wv_b != nullptr) {
+                    Vcur = llm_build_mm_low_rank(ctx0, model.layers[il].wv_a, model.layers[il].wv_b, cur);
+                } else {
+                    Vcur = llm_build_lora_mm(lctx, ctx0, model.layers[il].wv, cur);
+                }
                 cb(Vcur, "Vcur", il);
                 Vcur = ggml_add(ctx0, Vcur, model.layers[il].bv);
                 cb(Vcur, "Vcur", il);

@@ -721,6 +721,8 @@ void llama_model::load_hparams(llama_model_loader & ml) {
             // fall through
         case LLM_ARCH_QWEN2:
             {
+                ml.get_key(LLM_KV_ATTENTION_Q_LORA_RANK, hparams.n_lora_q);
+                ml.get_key(LLM_KV_ATTENTION_KV_LORA_RANK, hparams.n_lora_kv);
                 ml.get_key(LLM_KV_ATTENTION_LAYERNORM_RMS_EPS, hparams.f_norm_rms_eps);
                 switch (hparams.n_layer) {
                     case 24: type = hparams.n_embd == 1024 ? LLM_TYPE_0_5B : LLM_TYPE_1B; break;
@@ -2088,14 +2090,35 @@ bool llama_model::load_tensors(llama_model_loader & ml) {
                         output = create_tensor(tn(LLM_TENSOR_TOKEN_EMBD, "weight"), {n_embd, n_vocab}, TENSOR_DUPLICATED);
                     }
 
+                    const int64_t n_lora_q  = hparams.n_lora_q;
+                    const int64_t n_lora_kv = hparams.n_lora_kv;
+
                     for (int i = 0; i < n_layer; ++i) {
                         auto & layer = layers[i];
 
                         layer.attn_norm = create_tensor(tn(LLM_TENSOR_ATTN_NORM, "weight", i), {n_embd}, 0);
 
-                        layer.wq = create_tensor(tn(LLM_TENSOR_ATTN_Q,   "weight", i), {n_embd, n_embd}, 0);
-                        layer.wk = create_tensor(tn(LLM_TENSOR_ATTN_K,   "weight", i), {n_embd, n_embd_gqa}, 0);
-                        layer.wv = create_tensor(tn(LLM_TENSOR_ATTN_V,   "weight", i), {n_embd, n_embd_gqa}, 0);
+                        if (n_lora_q != 0 && ml.get_tensor_meta(tn(LLM_TENSOR_DEC_ATTN_Q, "weight", i).str().c_str())) {
+                            layer.wq_a = create_tensor(tn(LLM_TENSOR_ATTN_Q, "weight", i), {n_lora_q, n_embd}, 0);
+                            layer.wq_b = create_tensor(tn(LLM_TENSOR_DEC_ATTN_Q, "weight", i), {n_embd, n_lora_q}, 0);
+                        } else {
+                            layer.wq = create_tensor(tn(LLM_TENSOR_ATTN_Q,   "weight", i), {n_embd, n_embd}, 0);
+                        }
+
+                        if (n_lora_kv != 0 && ml.get_tensor_meta(tn(LLM_TENSOR_DEC_ATTN_K, "weight", i).str().c_str())) {
+                            layer.wk_a = create_tensor(tn(LLM_TENSOR_ATTN_K, "weight", i), {n_lora_kv, n_embd_gqa}, 0);
+                            layer.wk_b = create_tensor(tn(LLM_TENSOR_DEC_ATTN_K, "weight", i), {n_embd, n_lora_kv}, 0);
+                        } else {
+                            layer.wk = create_tensor(tn(LLM_TENSOR_ATTN_K,   "weight", i), {n_embd, n_embd_gqa}, 0);
+                        }
+
+                        if (n_lora_kv != 0 && ml.get_tensor_meta(tn(LLM_TENSOR_DEC_ATTN_V, "weight", i).str().c_str())) {
+                            layer.wv_a = create_tensor(tn(LLM_TENSOR_ATTN_V, "weight", i), {n_lora_kv, n_embd_gqa}, 0);
+                            layer.wv_b = create_tensor(tn(LLM_TENSOR_DEC_ATTN_V, "weight", i), {n_embd, n_lora_kv}, 0);
+                        } else {
+                            layer.wv = create_tensor(tn(LLM_TENSOR_ATTN_V,   "weight", i), {n_embd, n_embd_gqa}, 0);
+                        }
+
                         layer.wo = create_tensor(tn(LLM_TENSOR_ATTN_OUT, "weight", i), {n_embd, n_embd}, 0);
 
                         // optional bias tensors

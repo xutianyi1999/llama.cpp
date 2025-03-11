@@ -2213,6 +2213,12 @@ class Qwen2Model(Model):
                 self.gguf_writer.add_rope_scaling_factor(self.hparams["rope_scaling"]["factor"])
                 self.gguf_writer.add_rope_scaling_orig_ctx_len(self.hparams["rope_scaling"]["original_max_position_embeddings"])
 
+        if "q_lora_rank" in self.hparams and self.hparams["q_lora_rank"] is not None:
+            self.gguf_writer.add_q_lora_rank(self.hparams["q_lora_rank"])
+
+        if "kv_lora_rank" in self.hparams and self.hparams["kv_lora_rank"] is not None:
+            self.gguf_writer.add_kv_lora_rank(self.hparams["kv_lora_rank"])
+
 
 @Model.register("Qwen2VLForConditionalGeneration")
 class Qwen2VLModel(Model):

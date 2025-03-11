@@ -161,6 +161,7 @@ class TensorNameMap:
             "model.layers.{bid}.attention.wq",                           # internlm2
             "transformer.decoder_layer.{bid}.multi_head_attention.query",# Grok
             "transformer.h.{bid}.attn.attention.q_proj",                 # exaone
+            "model.layers.{bid}.self_attn.q_proj_L",              # qwen2-low_rank
         ),
 
         # Attention key
@@ -175,6 +176,7 @@ class TensorNameMap:
             "model.layers.{bid}.attention.wk",                         # internlm2
             "transformer.decoder_layer.{bid}.multi_head_attention.key",# Grok
             "transformer.h.{bid}.attn.attention.k_proj",               # exaone
+            "model.layers.{bid}.self_attn.k_proj_L",            # qwen2-low_rank
         ),
 
         # Attention value
@@ -188,6 +190,7 @@ class TensorNameMap:
             "model.layers.{bid}.attention.wv",                           # internlm2
             "transformer.decoder_layer.{bid}.multi_head_attention.value",# Grok
             "transformer.h.{bid}.attn.attention.v_proj",                 # exaone
+            "model.layers.{bid}.self_attn.v_proj_L",              # qwen2-low_rank
         ),
 
         # Attention output
@@ -608,14 +611,17 @@ class TensorNameMap:
 
         MODEL_TENSOR.DEC_ATTN_Q: (
             "decoder.block.{bid}.layer.0.SelfAttention.q", # t5
+            "model.layers.{bid}.self_attn.q_proj_R", # qwen2-low_rank
         ),
 
         MODEL_TENSOR.DEC_ATTN_K: (
             "decoder.block.{bid}.layer.0.SelfAttention.k", # t5
+            "model.layers.{bid}.self_attn.k_proj_R", # qwen2-low_rank
         ),
 
         MODEL_TENSOR.DEC_ATTN_V: (
             "decoder.block.{bid}.layer.0.SelfAttention.v", # t5
+            "model.layers.{bid}.self_attn.v_proj_R", # qwen2-low_rank
         ),
 
         MODEL_TENSOR.DEC_ATTN_OUT: (
